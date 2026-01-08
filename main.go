@@ -20,19 +20,19 @@ func main() {
 	inputChan := make(chan string)
 	outputChan := make(chan string)
 
-	cfg := viper.GetViper()
-	paths, err := app.FindSessionTargets(
-		cfg.GetStringSlice(config.TS_SEARCH_PATHS),
-		cfg.GetInt(config.TS_MAX_SEARCH_DEPTH),
-	)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error finding session targets: %v\n", err)
-	}
-
 	go func() {
+		cfg := viper.GetViper()
+		paths, err := app.FindSessionTargets(
+			cfg.GetStringSlice(config.TS_SEARCH_PATHS),
+			cfg.GetInt(config.TS_MAX_SEARCH_DEPTH),
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error finding session targets: %v\n", err)
+		}
 		for _, p := range paths {
 			inputChan <- p
 		}
+		close(inputChan)
 	}()
 
 	wg := new(sync.WaitGroup)
@@ -53,6 +53,7 @@ func main() {
 	}
 
 	code, err := launchFzf(inputChan, outputChan)
+	close(outputChan)
 	wg.Wait()
 	exit(code, err)
 }

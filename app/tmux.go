@@ -1,7 +1,10 @@
 package app
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -23,22 +26,52 @@ func isInsideTmuxSession() bool {
 	return os.Getenv("TMUX") != ""
 }
 
-func (t *Tmux) OpenTmuxSession(target string) error {
+func (t *Tmux) sessionExists(target string) bool {
+	if strings.HasPrefix(target, "[TMUX] ") {
+		return true
+	}
 
-	if strings.Contains(target, "[TMUX]") {
-		target = strings.TrimPrefix(target, "[TMUX] ")
-		_, err := t.run("tmux", "switch-client", "-t", target)
-		if err != nil {
+	sessions, err := t.ListTmuxSessions()
+	if err != nil {
+		return false
+	}
+
+	sessionName := fmt.Sprintf("[TMUX] %s", pathToSessionName(target))
+
+	return slices.Contains(sessions, sessionName)
+}
+
+func pathToSessionName(path string) string {
+	if sessionName, ok := strings.CutPrefix(path, "[TMUX] "); ok {
+		return sessionName
+	}
+	return filepath.Base(path)
+}
+
+func (t *Tmux) OpenTmuxSession(target string) error {
+	sessionName := pathToSessionName(target)
+
+	if !t.sessionExists(target) {
+		if err := t.createNewSession(sessionName, target); err != nil {
 			return err
 		}
 	}
 
-	_, err := t.run("tmux", "new-sesssion", "-d", "-s", target)
-	if err != nil {
+	return t.switchTo(sessionName)
+}
+
+func (t *Tmux) createNewSession(sessionName, targetPath string) error {
+	_, err := t.run("tmux", "new-session", "-ds", sessionName, "-c", targetPath)
+	return err
+}
+
+func (t *Tmux) switchTo(target string) error {
+	if isInsideTmuxSession() {
+		_, err := t.run("tmux", "switch-client", "-t", target)
 		return err
 	}
-
-	return nil
+	_, err := t.run("tmux", "attach-session", "-t", target)
+	return err
 }
 
 func (t *Tmux) ListTmuxSessions() ([]string, error) {
