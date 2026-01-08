@@ -1,25 +1,42 @@
 package app
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// FindDirs will find and list directories and running tmux sessions from the listed paths while ignoring
+// FindSessionTargets will find and list directories and running tmux sessions from the listed paths while ignoring
 // git directories (.git/)
-func FindDirs(paths []string, maxDepth int) ([]string, error) {
-	if len(paths) == 0 {
-		return []string{}, fmt.Errorf("no paths provided")
-	}
+func FindSessionTargets(paths []string, maxDepth int) ([]string, error) {
+	targets := []string{}
 
-	// TODO: add tmux logic
+	tmux := NewTmux()
+	sessions, err := tmux.ListTmuxSessions()
+	if err != nil {
+		return []string{}, err
+	}
+	targets = append(targets, sessions...)
 
 	// find directories
+	dirs, err := findDirectories(paths, maxDepth)
+	if err != nil {
+		return []string{}, err
+	}
+	targets = append(targets, dirs...)
+
+	return targets, nil
+}
+
+func findDirectories(paths []string, maxDepth int) ([]string, error) {
+	if len(paths) == 0 {
+		return []string{}, nil
+	}
 
 	directories := []string{}
+
+	// find directories
 	for _, p := range paths {
 		searchPath, err := expandPath(p)
 		if err != nil {
