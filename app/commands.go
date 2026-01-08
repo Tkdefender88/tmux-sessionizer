@@ -1,6 +1,7 @@
-package filepicker
+package app
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -11,7 +12,7 @@ import (
 // git directories (.git/)
 func FindDirs(paths []string, maxDepth int) ([]string, error) {
 	if len(paths) == 0 {
-		return []string{}, nil
+		return []string{}, fmt.Errorf("no paths provided")
 	}
 
 	// TODO: add tmux logic

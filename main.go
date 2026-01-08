@@ -1,44 +1,60 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	fzf "github.com/junegunn/fzf/src"
 	"github.com/spf13/viper"
 	"gitlab.com/Tkdefender88/tmux-sessionizer/app"
+	"gitlab.com/Tkdefender88/tmux-sessionizer/config"
 )
 
-type model int
-
 func main() {
-	viper.SetConfigType("yaml")
-	viper.SetConfigName("config")
-	viper.AddConfigPath("$HOME/.config/tmux-sessionizer")
+	if err := config.SetupConfig(); err != nil {
+		fmt.Fprintf(os.Stderr, "error setting up config: %v\n", err)
+		os.Exit(2)
+	}
 
-	viper.SetDefault("ts_search_paths", []string{"~/workspace"})
-	viper.SetDefault("ts_extra_search_paths", []string{"~/dotfiles"})
-	viper.SetDefault("ts_max_search_depth", 2)
+	inputChan := make(chan string)
+	outputChan := make(chan string)
 
-	err := viper.ReadInConfig()
+	cfg := viper.GetViper()
+	paths, err := app.FindDirs(cfg.GetStringSlice(config.TS_SEARCH_PATHS), cfg.GetInt(config.TS_MAX_SEARCH_DEPTH))
 	if err != nil {
-		var fileLookupError viper.ConfigFileNotFoundError
-		if !errors.As(err, &fileLookupError) {
-			fmt.Fprintf(os.Stderr, "encountered an error with configuration: %v\n", err)
-			os.Exit(2)
-		}
-
-		fmt.Fprintf(os.Stderr, "No config found, writing file to config directory\n")
-		if err := viper.SafeWriteConfig(); err != nil {
-			fmt.Fprintf(os.Stderr, "encountered an error writing configuration: %v\n", err)
-			os.Exit(2)
-		}
+		fmt.Fprintf(os.Stderr, "error finding dirs: %v\n", err)
 	}
 
-	p := tea.NewProgram(app.Model{}, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "encountered an error: %v\n", err)
-		os.Exit(1)
+	go func() {
+		for _, p := range paths {
+			inputChan <- p
+		}
+	}()
+
+	go func() {
+		for s := range outputChan {
+			fmt.Println("Got: " + s)
+		}
+	}()
+
+	exit := func(code int, err error) {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+		}
+		os.Exit(code)
 	}
+
+	options, err := fzf.ParseOptions(
+		true,
+		[]string{"--multi", "--margin=20%", "--border", "--header=Tmux Sessionizer"},
+	)
+	if err != nil {
+		exit(fzf.ExitError, err)
+	}
+
+	options.Input = inputChan
+	options.Output = outputChan
+
+	code, err := fzf.Run(options)
+	exit(code, err)
 }
