@@ -62,6 +62,33 @@ func (t *Tmux) OpenTmuxSession(target string) error {
 
 func (t *Tmux) createNewSession(sessionName, targetPath string) error {
 	_, err := t.run("tmux", "new-session", "-ds", sessionName, "-c", targetPath)
+	if err != nil {
+		return err
+	}
+
+	return t.hydrateSession(sessionName, targetPath)
+}
+
+func (t *Tmux) hydrateSession(sessionName, targetPath string) error {
+	localHydrateFile := filepath.Join(targetPath, ".tmux-sessionizer")
+	if _, err := os.Stat(localHydrateFile); err == nil {
+		return t.hydrate(sessionName, localHydrateFile)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("couldn't hydrate, can't find home directory: %v\n", err)
+	}
+
+	globalHydrateFile := filepath.Join(homeDir, ".tmux-sessionizer")
+	if _, err := os.Stat(globalHydrateFile); err == nil {
+		return t.hydrate(sessionName, globalHydrateFile)
+	}
+	return nil
+}
+
+func (t *Tmux) hydrate(sessionName, hydrateFile string) error {
+	_, err := t.run("tmux", "send-keys", "-t", sessionName, fmt.Sprintf("source %s", hydrateFile), "c-M")
 	return err
 }
 
