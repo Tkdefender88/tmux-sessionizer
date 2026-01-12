@@ -4,8 +4,22 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
+
+const (
+	extraPathPattern = "([^:]+):([0-9]+)"
+)
+
+var (
+	extraPathRegex *regexp.Regexp
+)
+
+func init() {
+	extraPathRegex = regexp.MustCompile(extraPathPattern)
+}
 
 // FindSessionTargets will find and list directories and running tmux sessions from the listed paths while ignoring
 // git directories (.git/)
@@ -29,6 +43,21 @@ func FindSessionTargets(paths []string, maxDepth int) ([]string, error) {
 	return targets, nil
 }
 
+func parsePath(path string, depth int) (string, int) {
+	matches := extraPathRegex.FindStringSubmatch(path)
+	if len(matches) == 3 {
+		// matches[0] is the full match, matches[1] is the path, matches[2] is the depth
+		pathPart := matches[1]
+		depthLimit, err := strconv.Atoi(matches[2])
+		if err != nil {
+			return path, depth
+		}
+		return pathPart, depthLimit
+	}
+
+	return path, depth
+}
+
 func findDirectories(paths []string, maxDepth int) ([]string, error) {
 	if len(paths) == 0 {
 		return []string{}, nil
@@ -38,7 +67,8 @@ func findDirectories(paths []string, maxDepth int) ([]string, error) {
 
 	// find directories
 	for _, p := range paths {
-		searchPath, err := expandPath(p)
+		path, depthLimit := parsePath(p, maxDepth)
+		searchPath, err := expandPath(path)
 		if err != nil {
 			return []string{}, err
 		}
@@ -58,7 +88,7 @@ func findDirectories(paths []string, maxDepth int) ([]string, error) {
 					return filepath.SkipDir
 				}
 
-				if currentDepth > maxDepth {
+				if currentDepth > depthLimit {
 					return filepath.SkipDir
 				}
 

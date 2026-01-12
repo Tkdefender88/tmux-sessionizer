@@ -36,10 +36,10 @@ func rootCmd(cmd *cobra.Command, args []string) error {
 
 	go func() {
 		cfg := viper.GetViper()
-		paths, err := app.FindSessionTargets(
-			cfg.GetStringSlice(config.TS_SEARCH_PATHS),
-			cfg.GetInt(config.TS_MAX_SEARCH_DEPTH),
-		)
+		search_paths := cfg.GetStringSlice(config.TS_SEARCH_PATHS)
+		extra_paths := cfg.GetStringSlice(config.TS_EXTRA_SEARCH_PATHS)
+		search_paths = append(search_paths, extra_paths...)
+		paths, err := app.FindSessionTargets(search_paths, cfg.GetInt(config.TS_MAX_SEARCH_DEPTH))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error finding session targets: %v\n", err)
 		}
