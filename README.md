@@ -6,7 +6,7 @@ just for his workflow. This one is built in Go and is tailored for my workflows.
 project to get more familiar with tmux and understanding how to use it better. This isn't the first rewrite of this
 type of project there is another pretty popular one written in rust but this one is mine and I had fun making it. :)
 
-# Quick start
+## Quick start
 
 To install it you can run
 ```sh
@@ -14,7 +14,7 @@ go install gitlab.com/Tkdefender88/tmux-sessionizer
 
 ```
 
-# Usage
+## Usage
 
 Run `tmux-sessionizer` from your terminal. If it doesn't find a configuration file in ~/.config/tmux-sessionizer it will
 create a config.yaml file there with some defaults. Select the directories that you want to have it search through with
@@ -35,8 +35,7 @@ run that script for that project and start you in your python env. There is a hi
 
 I recommend setting up bash/zsh aliases or keyboard shortcuts to execute it faster. I have it bound to alt+f on my system.
 
-
-# Contributing
+## Contributing
 
 Open to contribution, however this isn't my primary focus so I may be slow to respond. You're welcome to fork it and
 customize it for yourself if you want.
