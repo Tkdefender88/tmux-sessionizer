@@ -21,28 +21,6 @@ func init() {
 	extraPathRegex = regexp.MustCompile(extraPathPattern)
 }
 
-// FindSessionTargets will find and list directories and running tmux sessions from the listed paths while ignoring
-// git directories (.git/)
-func FindSessionTargets(paths []string, maxDepth int) ([]string, error) {
-	targets := []string{}
-
-	tmux := NewTmux()
-	sessions, err := tmux.ListTmuxSessions()
-	if err != nil {
-		return []string{}, err
-	}
-	targets = append(targets, sessions...)
-
-	// find directories
-	dirs, err := findDirectories(paths, maxDepth)
-	if err != nil {
-		return []string{}, err
-	}
-	targets = append(targets, dirs...)
-
-	return targets, nil
-}
-
 func parsePath(path string, depth int) (string, int) {
 	matches := extraPathRegex.FindStringSubmatch(path)
 	if len(matches) == 3 {

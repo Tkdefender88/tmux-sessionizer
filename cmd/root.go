@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
 	fzf "github.com/junegunn/fzf/src"
@@ -10,7 +11,13 @@ import (
 	"github.com/spf13/viper"
 	"gitlab.com/Tkdefender88/tmux-sessionizer/app"
 	"gitlab.com/Tkdefender88/tmux-sessionizer/config"
+	"gitlab.com/Tkdefender88/tmux-sessionizer/logging"
 )
+
+func init() {
+	RootCmd.PersistentFlags().Bool("debug", false, "print debug logs to the terminal")
+	viper.BindPFlag("debug", RootCmd.PersistentFlags().Lookup("debug"))
+}
 
 var RootCmd = &cobra.Command{
 	Use:   "tmux-sessionizer",
@@ -34,12 +41,28 @@ var RootCmd = &cobra.Command{
 func rootCmd(cmd *cobra.Command, args []string) error {
 	inputChan := make(chan string)
 
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	logFilePath := filepath.Join(homedir, ".local", "state", "tmux-sessionizer.log")
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return err
+	}
+	defer logFile.Close()
+
+	logging.SetupLogging(logFile)
+
+	sessionizer := app.NewSessionManager()
+
 	go func() {
 		cfg := viper.GetViper()
 		search_paths := cfg.GetStringSlice(config.TS_SEARCH_PATHS)
 		extra_paths := cfg.GetStringSlice(config.TS_EXTRA_SEARCH_PATHS)
 		search_paths = append(search_paths, extra_paths...)
-		paths, err := app.FindSessionTargets(search_paths, cfg.GetInt(config.TS_MAX_SEARCH_DEPTH))
+		paths, err := sessionizer.FindSessionTargets(search_paths, cfg.GetInt(config.TS_MAX_SEARCH_DEPTH))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error finding session targets: %v\n", err)
 		}
@@ -53,14 +76,14 @@ func rootCmd(cmd *cobra.Command, args []string) error {
 	outputChan := make(chan string)
 	wg.Go(func() {
 		for s := range outputChan {
-			err := openTmuxSession(s)
+			err := sessionizer.OpenSession(s)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error opening tmux session: %v\n", err)
 			}
 		}
 	})
 
-	_, err := launchFzf(inputChan, outputChan)
+	_, err = launchFzf(inputChan, outputChan)
 	close(outputChan)
 	wg.Wait()
 	if err != nil {
@@ -87,8 +110,4 @@ func launchFzf(input chan string, output chan string) (int, error) {
 	options.Output = output
 
 	return fzf.Run(options)
-}
-
-func openTmuxSession(target string) error {
-	return app.NewTmux().OpenTmuxSession(target)
 }

@@ -17,6 +17,6 @@ func main() {
 	}
 
 	if err := fang.Execute(context.Background(), cmd.RootCmd); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
 }

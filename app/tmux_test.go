@@ -27,10 +27,16 @@ func Test_ListTmuxSessions(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tmux := NewTmux()
-			tmux.Runner = MockRunner(tc.runnerResult)
+			tmux := NewTmux(WithRunner(&MockRunner{
+				run: func(name string, args ...string) (CommandResult, error) {
+					return tc.runnerResult, nil
+				},
+				runInteractive: func(name string, args ...string) error {
+					return nil
+				},
+			}))
 
-			got, err := tmux.ListTmuxSessions()
+			got, err := tmux.listSessions()
 			assert.NoError(t, err)
 			require.Equal(t, tc.want, got)
 		})
