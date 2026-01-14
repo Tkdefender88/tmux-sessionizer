@@ -96,10 +96,10 @@ func launchFzf(input chan string, output chan string) (int, error) {
 	options, err := fzf.ParseOptions(
 		true,
 		[]string{
-			"--multi",
-			"--margin=20%",
-			"--border",
+			"--height=~50%",
+			"--tiebreak=length",
 			"--header=Tmux Sessionizer",
+			"--layout=reverse",
 		},
 	)
 	if err != nil {

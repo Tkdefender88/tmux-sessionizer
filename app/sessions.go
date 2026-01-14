@@ -9,6 +9,17 @@ import (
 	"strings"
 )
 
+type SessionManager struct {
+	tmux *Tmux
+}
+
+func NewSessionManager() *SessionManager {
+	tmux := NewTmux()
+	return &SessionManager{
+		tmux: tmux,
+	}
+}
+
 // FindSessionTargets will find and list directories and running tmux sessions from the listed paths while ignoring
 // git directories (.git/)
 func (s *SessionManager) FindSessionTargets(paths []string, maxDepth int) ([]string, error) {
@@ -28,17 +39,6 @@ func (s *SessionManager) FindSessionTargets(paths []string, maxDepth int) ([]str
 	targets = append(targets, dirs...)
 
 	return targets, nil
-}
-
-type SessionManager struct {
-	tmux *Tmux
-}
-
-func NewSessionManager() *SessionManager {
-	tmux := NewTmux()
-	return &SessionManager{
-		tmux: tmux,
-	}
 }
 
 func (s *SessionManager) sessionExists(target string) bool {
