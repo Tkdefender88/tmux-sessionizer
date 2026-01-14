@@ -143,7 +143,8 @@ func (s *SessionManager) listActiveSessions() ([]string, error) {
 
 	sessions, err := s.tmux.listSessions()
 	if err != nil {
-		return []string{}, err
+		slog.Error("error while finding active sessions", "error", err)
+		return []string{}, nil
 	}
 
 	return sessions, nil

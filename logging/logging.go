@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/muesli/termenv"
 	"github.com/spf13/viper"
 )
 
-func SetupLogging(w io.Writer) {
+func SetupLogging(w io.Writer) *slog.Logger {
 
 	cfg := viper.GetViper()
 	isDebug := cfg.GetBool("debug")
@@ -23,10 +24,20 @@ func SetupLogging(w io.Writer) {
 	}
 
 	logHandler := log.NewWithOptions(logWriter, log.Options{
-		TimeFormat: time.Kitchen,
-		Level:      log.DebugLevel,
+		Formatter:       log.TextFormatter,
+		TimeFormat:      time.Kitchen,
+		ReportTimestamp: true,
+		ReportCaller:    true,
+		Level:           log.DebugLevel,
 	})
+
+	// Force color output when in debug mode (writing to terminal)
+	if isDebug {
+		logHandler.SetColorProfile(termenv.TrueColor)
+	}
 
 	logger := slog.New(logHandler)
 	slog.SetDefault(logger)
+
+	return logger
 }
