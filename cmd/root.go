@@ -17,6 +17,7 @@ import (
 func init() {
 	RootCmd.PersistentFlags().Bool("debug", false, "print debug logs to the terminal")
 	viper.BindPFlag("debug", RootCmd.PersistentFlags().Lookup("debug"))
+	RootCmd.Flags().String("path", "", "path to a directory to open directly, skipping fuzzy find")
 }
 
 var RootCmd = &cobra.Command{
@@ -31,6 +32,10 @@ var RootCmd = &cobra.Command{
 	`,
 	Example: `  # Launch the interactive fuzzy finder
   tmux-sessionizer
+
+  # Open a specific directory directly, skipping fuzzy find
+  tmux-sessionizer --path /path/to/project
+  tmux-sessionizer --path $(find ~/projects -maxdepth 1 -type d | fzf)
 
   # Bind to a keyboard shortcut (bash/zsh)
   bind -x '"\C-f":"tmux-sessionizer"'`,
@@ -56,6 +61,14 @@ func rootCmd(cmd *cobra.Command, args []string) error {
 	logging.SetupLogging(logFile)
 
 	sessionizer := app.NewSessionManager()
+
+	if path, _ := cmd.Flags().GetString("path"); path != "" {
+		info, err := os.Stat(path)
+		if err != nil || !info.IsDir() {
+			return fmt.Errorf("path %q is not a valid directory", path)
+		}
+		return sessionizer.OpenSession(path)
+	}
 
 	go func() {
 		cfg := viper.GetViper()

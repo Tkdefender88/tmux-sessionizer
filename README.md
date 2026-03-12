@@ -35,6 +35,20 @@ run that script for that project and start you in your python env. There is a hi
 
 I recommend setting up bash/zsh aliases or keyboard shortcuts to execute it faster. I have it bound to alt+f on my system.
 
+### Opening a directory directly
+
+Use the `--path` flag to skip the fuzzy finder and open a specific directory directly. If a tmux session already exists
+for that directory it will switch to it, otherwise it will create a new session and hydrate it as normal.
+
+```sh
+# Open a specific directory
+tmux-sessionizer --path ~/workspace/myproject
+
+# Pairs well with other tools via command substitution
+tmux-sessionizer --path $(zoxide query myproject)
+tmux-sessionizer --path $(pwd)
+```
+
 ## Contributing
 
 Open to contribution, however this isn't my primary focus so I may be slow to respond. You're welcome to fork it and
